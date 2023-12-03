@@ -116,49 +116,36 @@ fn parse_number_or_period_or_symbol<'a>(input: Span<'a>) -> IResult<Span<'a>, Ve
     many0(alt((parse_number, parse_symbol, parse_period)))(input)
 }
 
-fn parse_number<'a>(input: Span<'a>) -> IResult<Span<'a>, Token> {
+fn parse_to_token_with_offset<'a>(
+    parser: impl Fn(Span<'a>) -> IResult<Span<'a>, Span<'a>>,
+    input: Span<'a>,
+) -> IResult<Span<'a>, Token<'a>> {
     let start_offset = input.location_offset();
-    let (remaining, number) = digit1(input)?;
+    let (remaining, value) = parser(input)?;
     let end_offset = remaining.location_offset();
 
     Ok((
         remaining,
         Token {
-            value: number.fragment(),
+            value: value.fragment(),
             start_pos: start_offset,
             end_pos: end_offset,
         },
     ))
+}
+
+fn parse_number<'a>(input: Span<'a>) -> IResult<Span<'a>, Token> {
+    parse_to_token_with_offset(digit1, input)
 }
 
 fn parse_symbol<'a>(input: Span<'a>) -> IResult<Span<'a>, Token> {
-    let start_offset = input.location_offset();
-    let (remaining, symbol) = take_while1(|c: char| !c.is_alphanumeric() && c != '.')(input)?;
-    let end_offset = remaining.location_offset();
-
-    Ok((
-        remaining,
-        Token {
-            value: symbol.fragment(),
-            start_pos: start_offset,
-            end_pos: end_offset,
-        },
-    ))
+    let parser = take_while1(|c: char| !c.is_alphanumeric() && c != '.');
+    parse_to_token_with_offset(parser, input)
 }
 
 fn parse_period<'a>(input: Span<'a>) -> IResult<Span<'a>, Token> {
-    let start_offset = input.location_offset();
-    let (remaining, periods) = take_while1(|c: char| c == '.')(input)?;
-    let end_offset = remaining.location_offset();
-
-    Ok((
-        remaining,
-        Token {
-            value: periods.fragment(),
-            start_pos: start_offset,
-            end_pos: end_offset,
-        },
-    ))
+    let parser = take_while1(|c: char| c == '.');
+    parse_to_token_with_offset(parser, input)
 }
 
 fn is_adjacent(num_start: usize, num_end: usize, symbol_start: usize, symbol_end: usize) -> bool {
