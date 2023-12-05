@@ -40,12 +40,9 @@ fn process(input: &str) -> usize {
             .for_each(|(i, _)| {
                 let card_num = card_id + i + 1;
 
-                cards
-                    .entry(card_num)
-                    .and_modify(|v| {
-                        *v = *v + times_to_process;
-                    })
-                    .or_insert(1);
+                cards.entry(card_num).and_modify(|v| {
+                    *v = *v + times_to_process;
+                });
             });
     });
 
